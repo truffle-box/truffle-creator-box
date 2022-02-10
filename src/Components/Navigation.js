@@ -5,7 +5,7 @@ import styled from 'styled-components';
 
 import truffle from "../Assets/icon.png"
 
-// import Login from "./Torus"
+import Login from "./Torus"
 
 import {
   Link
@@ -15,7 +15,7 @@ const StyledLink = styled(Link)`
   color: #4a4a4a;
 `;
 
-const Navigation = () => {
+const Navigation = ({accountDialog, showAccountDialog, metadataCID}) => {
   const [navIsActive, setNavIsActive] = useState(false);
 
   return (
@@ -52,8 +52,7 @@ const Navigation = () => {
           </Navbar.Container>
           <Navbar.Container align="end">
             <Navbar.Item href="#">
-              Login
-              {/* <Login accountDialog={accountDialog} showAccountDialog={showAccountDialog} metadataCID={metadataCID} /> */}
+              <Login accountDialog={accountDialog} showAccountDialog={showAccountDialog} metadataCID={metadataCID} />
             </Navbar.Item>
           </Navbar.Container>
         </Navbar.Menu>
