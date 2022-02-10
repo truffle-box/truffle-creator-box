@@ -14,9 +14,10 @@ export default function Login() {
         <div>
           {accountData.ens?.name
             ? `${accountData.ens?.name} (${accountData.address})`
-            : accountData.address} &nbsp;
-        {/* <div>Connected to {accountData.connector.name}</div> */}
-        <button onClick={disconnect}>Disconnect</button>
+            : accountData.address}{" "}
+          &nbsp;
+          {/* <div>Connected to {accountData.connector.name}</div> */}
+          <button onClick={disconnect}>Disconnect</button>
         </div>
       </div>
     );
@@ -35,5 +36,4 @@ export default function Login() {
       </div>
     );
   }
-
 }
