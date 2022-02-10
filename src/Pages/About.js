@@ -1,6 +1,9 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+
+import { Button  } from 'react-bulma-components';
 
 const About = ({contract}) => {
+  
   return (
     <div className="App">
       <h2>About</h2>

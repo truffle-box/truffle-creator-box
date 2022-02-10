@@ -7,6 +7,8 @@ import {
   useParams
 } from "react-router-dom";
 
+import { Button  } from 'react-bulma-components';
+
 const StyledSVG = styled(ReactSVG)`
   width: 60vh;
   height: 60vh;
@@ -62,7 +64,7 @@ const Gallery = ({contract, walletDetected}) => {
     // if (walletDetected) {
       load()
     // }
-  })
+  }, [])
 
   return (
     <div className="App">
