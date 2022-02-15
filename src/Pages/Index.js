@@ -1,11 +1,11 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, {useEffect, useRef, useState} from "react";
 
-import { useAccount } from "wagmi";
+import {useAccount} from "wagmi";
 
 import axios from "axios";
 import styled from "styled-components";
-import { SketchField, Tools } from "react-sketch";
-import { ethers } from "ethers";
+import {SketchField, Tools} from "react-sketch";
+import {ethers} from "ethers";
 
 import cartooneyes from "../Assets/cartooneyes.png";
 import lasereyes from "../Assets/lasereyes.png";
@@ -21,12 +21,12 @@ import sample5 from "../Assets/truffle-5.png";
 
 const fabric = require("fabric").fabric;
 
-// const IPFS = require("ipfs-mini");
-// const ipfs = new IPFS({
-//   host: "ipfs.infura.io",
-//   port: 5001,
-//   protocol: "https",
-// });
+const IPFS = require("ipfs-mini");
+const ipfs = new IPFS({
+  host: "ipfs.infura.io",
+  port: 5001,
+  protocol: "https",
+});
 const ipfsClient = require("ipfs-http-client");
 
 const StyledSketchField = styled(SketchField)`
@@ -377,18 +377,47 @@ const abi = [
 //     checkNetworks();
 //   }, []);
 
-export default function Home() {
-  const [{ data: accountData }, disconnect] = useAccount({
+/**
+ * Returns a random integer between min (inclusive) and max (inclusive).
+ * The value is no lower than min (or the next integer greater than min
+ * if min isn't an integer) and no greater than max (or the next integer
+ * lower than max if max isn't an integer).
+ * Using Math.round() will give you a non-uniform distribution!
+ * @param min {number}
+ * @param max {number}
+ * @return {number} in range of min/max
+ */
+function getRandomInt(min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+const BAYC_ADDRESS = "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D";
+const AZUKI_ADDRESS = "0xED5AF388653567Af2F388E6224dC7C4b3241C544";
+const DOODLES_ADDRESS = "0x8a90CAb2b38dba80c64b7734e58Ee1dB38B8992e";
+const CC_ADDRESS = "0x1981CC36b59cffdd24B01CC5d698daa75e367e04";
+
+export default function Index() {
+  const [{data: accountData}] = useAccount({
     fetchEns: true,
   });
 
+  const [imageCID, setImageCID] = useState("");
+  const [metadataCID, setMetadataCID] = useState("");
+
+  const [mintStatus, setMintStatus] = useState(false);
   const [isValidL1, setIsValidL1] = useState();
+  const [mintModal, setMintModal] = useState(false);
   const [loadModal, setLoadModal] = useState(false);
+  const [saveModal, setSaveModal] = useState(false);
+
   const [tool, setTool] = useState(Tools.Select);
-  const [importAddress, setImportAddress] = useState(
-    "0x3B3ee1931Dc30C1957379FAc9aba94D1C48a5405"
-  );
-  const [importId, setImportId] = useState(Math.floor(Math.random() * 24437)); // 24437, 12345, 11155, 1265, 175, 17367, 17618, 10798 :)))
+  const [importAddress, setImportAddress] = useState("0x3B3ee1931Dc30C1957379FAc9aba94D1C48a5405");
+  const [importId, setImportId] = useState(getRandomInt(0, 10000)); // set to some kind of usable base.
+
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
 
   const _sketch = useRef();
   const infuraProvider = new ethers.providers.InfuraProvider();
@@ -447,7 +476,7 @@ export default function Home() {
   };
 
   const randomize = () => {
-    setImportId(Math.floor(Math.random() * 24437));
+    setImportId(getRandomInt(1, 10000));
   };
 
   const loadImage = async (url) => {
@@ -457,11 +486,11 @@ export default function Home() {
       return;
     }
 
-    const response = await axios.get(url, { responseType: "blob" });
+    const response = await axios.get(url, {responseType: "blob"});
     const reader = new FileReader();
     reader.readAsDataURL(response.data);
     reader.onload = async () => {
-      fabric.Image.fromURL(reader.result, function (oImg) {
+      fabric.Image.fromURL(reader.result, function(oImg) {
         oImg.scaleToWidth(640);
         _sketch.current.setBackgroundFromDataUrl(oImg.toDataURL(), {
           stretched: true,
@@ -475,18 +504,80 @@ export default function Home() {
   const loadExistingNFT = async () => {
     const contract = new ethers.Contract(importAddress, abi, infuraProvider);
     const metadataUri = await contract.tokenURI(importId);
-    const metadataRes = await fetch(metadataUri);
+    const sanitisedUri = processUri(metadataUri);
+    const metadataRes = await fetch(sanitisedUri);
     const metadata = await metadataRes.json();
-    const santizedMetadataUri = sanitize(metadata.image);
-
-    console.log(santizedMetadataUri);
-    loadImage(santizedMetadataUri);
+    const sanitizedMetadataUri = processUri(metadata.image);
+    await loadImage(sanitizedMetadataUri);
     setLoadModal(false);
   };
 
   const load = async (url) => {
-    loadImage(url);
+    await loadImage(url);
     setLoadModal(false);
+  };
+
+  const toggleSaveModal = () => {
+    if (saveModal) {
+      setSaveModal(false);
+    } else {
+      setSaveModal(true);
+    }
+  };
+
+  const mint = () => {
+    if (mintModal) {
+      setMintModal(false);
+    } else {
+      setMintModal(true);
+    }
+  };
+
+  const storageDeal = async () => {
+    const metadataDeal = {
+      jsonrpc: "2.0",
+      id: 0,
+      method: "Filecoin.ClientStartDeal",
+      params: [
+        {
+          Data: {
+            TransferType: "graphsync",
+            Root: {"/": metadataCID},
+            PieceCid: null,
+            PieceSize: 0,
+          },
+          Wallet:
+              "t3r3yrbujjmmjdixnnaab35ioi7ntpnlrt4bmsrtw4j5d6kjb2eeyu7axr2zv2g5m5emby6mzn6rvqjwzbfrya",
+          Miner: "t01000",
+          EpochPrice: 2500,
+          MinBlocksDuration: 300,
+        },
+      ],
+    };
+    const res = await axios.post("http://localhost:7777/rpc/v0", metadataDeal);
+    console.log(res);
+  };
+
+  const save = async () => {
+    toggleSaveModal();
+  };
+
+  const actuallySave = async () => {
+    const reader = new FileReader();
+    reader.onloadend = async function() {
+      const fileContents = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><image width="100%" height="100%" href="${reader.result}" /></svg>`;
+      const ipfsImg = await ipfs.add(fileContents);
+      setImageCID(ipfsImg);
+
+      // TODO - load the title / description from fields (prepopulate from what's loaded)
+      const metadata = `{ "name":"${title}", "description":"${description}","image":"ipfs://${ipfsImg}" }`;
+
+      const ipfsMetadata = await ipfs.add(metadata);
+      setMetadataCID(ipfsMetadata);
+    };
+    const canvas = _sketch.current.toDataURL();
+    const blob = await (await fetch(canvas)).blob();
+    reader.readAsDataURL(blob);
   };
 
   const sanitize = (url) => {
@@ -494,9 +585,22 @@ export default function Home() {
     const x = url.replace("ipfs/", "").replace("ipfs://", "");
     const cidV0 = x.split("/")[0];
     const cidV1 = new ipfsClient.CID(cidV0).toV1();
-    const sanitized = `https://${cidV1}.ipfs.dweb.link/${x.split("/")[1]}`;
-    return sanitized;
+    return `https://${cidV1}.ipfs.dweb.link/${x.split("/")[1]}`;
   };
+
+  /**
+   * Fixes the prefix to be HTTP compliant for our axios code to grab.
+   *
+   * @param metadataUri {string}
+   * @returns {string} with a fixed ipfs.io proxy added or the url if it's not an ipfs:// prefix.
+   */
+  function processUri(metadataUri) {
+    if (metadataUri.indexOf("ipfs://") === 0) {
+      // https://ipfs.io/ipfs/QmZHKZDavkvNfA9gSAg7HALv8jF7BJaKjUc9U2LSuvUySB/9317.json
+      return metadataUri.replace("ipfs://", "https://ipfs.io/ipfs/")
+    }
+    return metadataUri;
+  }
 
   useEffect(() => {
     async function checkNetwork() {
@@ -509,187 +613,192 @@ export default function Home() {
         setIsValidL1(false);
       }
     }
+
     checkNetwork();
   }, [accountData]);
 
-
   return (
-    <div className="Content">
-      {!isValidL1 ? (
-        <div>
-          unable to detect valid network. please connect to the kovan l1 testnet
-        </div>
-      ) : (
-        <></>
-      )}
-
-      <header className="App-header">
-        <div>
-          <StyledButton onClick={() => toggleLoadModal()}>load</StyledButton>
-          <span>&gt;</span>
-          {/* <StyledButton onClick={() => save()}>save</StyledButton> */}
-          <span>&gt;</span>
-          {/* <StyledButton onClick={() => mint()}>mint</StyledButton> */}
-        </div>
-        <div>
-          <MemeButton onClick={() => eyes()}>eyes</MemeButton>
-          <MemeButton onClick={() => laserify()}>lasers</MemeButton>
-          <MemeButton onClick={() => trollify()}>troll</MemeButton>
-          <MemeButton onClick={() => shadify()}>shades</MemeButton>
-          <MemeButton onClick={() => text()}>text</MemeButton>
-          &nbsp;&nbsp;
-          <MemeButton onClick={() => select()}>select</MemeButton>
-          <MemeButton onClick={() => pen()}>pen</MemeButton>
-          <MemeButton onClick={() => remove()}>remove</MemeButton>
-        </div>
-        <StyledSketchField
-          width="640px"
-          height="640px"
-          tool={tool}
-          lineColor="black"
-          lineWidth={3}
-          ref={(c) => {
-            _sketch.current = c;
-          }}
-          name="sketch"
-        />
-      </header>
-
-      <div className={`modal ${loadModal ? "is-active" : ""}`}>
-        <div className="modal-background"></div>
-        <div className="modal-content">
-          <header className="modal-card-head">
-            <p className="modal-card-title">load</p>
-            <button
-              className="delete"
-              aria-label="close"
-              onClick={() => toggleLoadModal()}
-            ></button>
-          </header>
-          <section className="modal-card-body">
-            <h2>select your truffle...</h2>
-            <ThumbImg src={sample1} onClick={() => load(sample1)} />
-            <ThumbImg src={sample2} onClick={() => load(sample2)} />
-            <ThumbImg src={sample3} onClick={() => load(sample3)} />
-            <ThumbImg src={sample4} onClick={() => load(sample4)} />
-            <ThumbImg src={sample5} onClick={() => load(sample5)} />
-            <hr />
-            <h2>load from an existing NFT, e.g.</h2>
-            <StyledTextBox
-              value={importAddress}
-              placeholder={`contract address`}
-              onChange={(e) => setImportAddress(e.currentTarget.value)}
-            />
-            <br />
-            <StyledTextBox
-              value={importId}
-              placeholder={`id`}
-              onChange={(e) => setImportId(e.currentTarget.value)}
-            />
-            <br />
+      <div className="Content">
+        {!isValidL1 ? (
             <div>
-              <MemeButton onClick={() => randomize()}>randomize</MemeButton>
-              &nbsp;
-              <MemeButton onClick={() => loadExistingNFT()}>
-                load from contract
-              </MemeButton>
+              unable to detect valid network. please connect to the kovan l1 testnet
             </div>
-          </section>
-          <footer className="modal-card-foot"></footer>
+        ) : (
+            <></>
+        )}
+
+        <header className="App-header">
+          <div>
+            <StyledButton onClick={() => toggleLoadModal()}>load</StyledButton>
+            <span>&gt;</span>
+            <StyledButton onClick={() => save()}>save</StyledButton>
+            <span>&gt;</span>
+            <StyledButton onClick={() => mint()}>mint</StyledButton>
+          </div>
+          <div>
+            <MemeButton onClick={() => eyes()}>eyes</MemeButton>
+            <MemeButton onClick={() => laserify()}>lasers</MemeButton>
+            <MemeButton onClick={() => trollify()}>troll</MemeButton>
+            <MemeButton onClick={() => shadify()}>shades</MemeButton>
+            <MemeButton onClick={() => text()}>text</MemeButton>
+            &nbsp;&nbsp;
+            <MemeButton onClick={() => select()}>select</MemeButton>
+            <MemeButton onClick={() => pen()}>pen</MemeButton>
+            <MemeButton onClick={() => remove()}>remove</MemeButton>
+          </div>
+          <StyledSketchField
+              width="640px"
+              height="640px"
+              tool={tool}
+              lineColor="black"
+              lineWidth={3}
+              ref={(c) => {
+                _sketch.current = c;
+              }}
+              name="sketch"
+          />
+        </header>
+
+        <div className={`modal ${loadModal ? "is-active" : ""}`}>
+          <div className="modal-background"/>
+          <div className="modal-content">
+            <header className="modal-card-head">
+              <p className="modal-card-title">load</p>
+              <button
+                  className="delete"
+                  aria-label="close"
+                  onClick={() => toggleLoadModal()}
+              />
+            </header>
+            <section className="modal-card-body">
+              <h2>select your truffle...</h2>
+              <ThumbImg src={sample1} onClick={() => load(sample1)}/>
+              <ThumbImg src={sample2} onClick={() => load(sample2)}/>
+              <ThumbImg src={sample3} onClick={() => load(sample3)}/>
+              <ThumbImg src={sample4} onClick={() => load(sample4)}/>
+              <ThumbImg src={sample5} onClick={() => load(sample5)}/>
+              <hr/>
+              <h2>load from an existing NFT, e.g.</h2>
+              <button onClick={() => setImportAddress(BAYC_ADDRESS)}>BAYC</button>
+              <button onClick={() => setImportAddress(AZUKI_ADDRESS)}>AZUKI</button>
+              <button onClick={() => setImportAddress(DOODLES_ADDRESS)}>Doodles</button>
+              <button onClick={() => setImportAddress(CC_ADDRESS)}>Crypto Chicks</button>
+              <StyledTextBox
+                  value={importAddress}
+                  placeholder={`contract address`}
+                  onChange={(e) => setImportAddress(e.currentTarget.value)}
+              />
+              <br/>
+              <StyledTextBox
+                  value={importId}
+                  placeholder={`id`}
+                  onChange={(e) => setImportId(e.currentTarget.value)}
+              />
+              <br/>
+              <div>
+                <MemeButton onClick={() => randomize()}>randomize</MemeButton>
+                &nbsp;
+                <MemeButton onClick={() => loadExistingNFT()}>
+                  load from contract
+                </MemeButton>
+              </div>
+            </section>
+            <footer className="modal-card-foot"/>
+          </div>
         </div>
+
+        <div className={`modal ${saveModal ? "is-active" : ""}`}>
+          <div className="modal-background"/>
+          <div className="modal-content">
+            <header className="modal-card-head">
+              <p className="modal-card-title">save</p>
+              <button
+                  className="delete"
+                  aria-label="close"
+                  onClick={() => toggleSaveModal()}
+              />
+            </header>
+            <section className="modal-card-body">
+              <StyledTextBox
+                  value={title}
+                  placeholder={`nft name`}
+                  onChange={(e) => setTitle(e.currentTarget.value)}
+              />
+              <br/>
+              <StyledTextBox
+                  value={description}
+                  placeholder={`nft description`}
+                  onChange={(e) => setDescription(e.currentTarget.value)}
+              />
+              <br/>
+              <MemeButton onClick={() => actuallySave()}>
+                save to ipfs
+              </MemeButton>
+              <hr/>
+              <p>
+                Image CID:{" "}
+                <a
+                    href={`ipfs://${imageCID}`}
+                    target="_blank"
+                >{`ipfs://${imageCID}`}</a>
+              </p>
+              <p>
+                Metadata CID:{" "}
+                <a
+                    href={`ipfs://${metadataCID}`}
+                    target="_blank"
+                >{`ipfs://${metadataCID}`}</a>
+              </p>
+              <p>{metadataCID ? `done! you're now ready to mint!` : ``}</p>
+              <hr/>
+              <p>
+                once your assets have been saved, it's highly recommended to
+                preserve with a storage deal or pinning service
+              </p>
+              <MemeButton onClick={() => storageDeal()}>
+                preserve with filecoin
+              </MemeButton>
+              &nbsp;
+              <MemeButton>
+                <a
+                    href="http://pinata.cloud/"
+                    target="_blank"
+                    style={{color: "#000"}} rel="noreferrer"
+                >
+                  preserve with pinata
+                </a>
+              </MemeButton>
+              <p>
+                note that a filecoin requires a locally running lotus node
+              </p>
+            </section>
+            <footer className="modal-card-foot"/>
+          </div>
+        </div>
+        {/*
+         <div className={`modal ${mintModal ? "is-active" : ""}`}>
+         <div className="modal-background"></div>
+         <div className="modal-content">
+         <header className="modal-card-head">
+         <p className="modal-card-title">mint</p>
+         <button
+         className="delete"
+         aria-label="close"
+         onClick={() => mint()}
+         ></button>
+         </header>
+         <section className="modal-card-body">
+         <p>
+         <strong>layer 1</strong>
+         </p>
+         <p>mint to layer 1 (more expensive / immediately usable)</p>
+         <MemeButton onClick={() => mintNFT()}>mint to L1</MemeButton>
+         <p>{mintStatus}</p>
+         </section>
+         <footer className="modal-card-foot"></footer>
+         </div>
+         </div>
+         */}
       </div>
-      {/*
-               <div className={`modal ${saveModal ? "is-active" : ""}`}>
-                 <div className="modal-background"></div>
-                 <div className="modal-content">
-                   <header className="modal-card-head">
-                     <p className="modal-card-title">save</p>
-                     <button
-                       className="delete"
-                       aria-label="close"
-                       onClick={() => toggleSaveModal()}
-                     ></button>
-                   </header>
-                   <section className="modal-card-body">
-                     <StyledTextBox
-                       value={title}
-                       placeholder={`nft name`}
-                       onChange={(e) => setTitle(e.currentTarget.value)}
-                     />
-                     <br />
-                     <StyledTextBox
-                       value={description}
-                       placeholder={`nft description`}
-                       onChange={(e) => setDescription(e.currentTarget.value)}
-                     />
-                     <br />
-                     <MemeButton onClick={() => actuallySave()}>
-                       save to ipfs
-                     </MemeButton>
-                     <hr />
-                     <p>
-                       Image CID:{" "}
-                       <a
-                         href={`ipfs://${imageCID}`}
-                         target="_blank"
-                       >{`ipfs://${imageCID}`}</a>
-                     </p>
-                     <p>
-                       Metadata CID:{" "}
-                       <a
-                         href={`ipfs://${metadataCID}`}
-                         target="_blank"
-                       >{`ipfs://${metadataCID}`}</a>
-                     </p>
-                     <p>{metadataCID ? `done! you're now ready to mint!` : ``}</p>
-                     <hr />
-                     <p>
-                       once your assets have been saved, it's highly recommended to
-                       preserve with a storage deal or pinning service
-                     </p>
-                     <MemeButton onClick={() => storageDeal()}>
-                       preserve with filecoin
-                     </MemeButton>
-                     &nbsp;
-                     <MemeButton>
-                       <a
-                         href="http://pinata.cloud/"
-                         target="_blank"
-                         style={{ color: "#000" }}
-                       >
-                         preserve with pinata
-                       </a>
-                     </MemeButton>
-                     <p>
-                       note that a filecoin requires a locally running lotus node
-                     </p>
-                   </section>
-                   <footer className="modal-card-foot"></footer>
-                 </div>
-               </div
-               <div className={`modal ${mintModal ? "is-active" : ""}`}>
-                 <div className="modal-background"></div>
-                 <div className="modal-content">
-                   <header className="modal-card-head">
-                     <p className="modal-card-title">mint</p>
-                     <button
-                       className="delete"
-                       aria-label="close"
-                       onClick={() => mint()}
-                     ></button>
-                   </header>
-                   <section className="modal-card-body">
-                     <p>
-                       <strong>layer 1</strong>
-                     </p>
-                     <p>mint to layer 1 (more expensive / immediately usable)</p>
-                     <MemeButton onClick={() => mintNFT()}>mint to L1</MemeButton>
-                     <p>{mintStatus}</p>                
-                   </section>
-                   <footer className="modal-card-foot"></footer>
-                 </div>
-               </div>
-                  */}
-    </div>
   );
 }
