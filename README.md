@@ -1,8 +1,6 @@
-# Truffle Creator
+# Remixr 💿
 
-Create your very own Truffle NFT!
-
-![screenshot](screenshot.png)
+Remix all the (non-fungible) things!
 
 ## Installation 💾
 
@@ -19,14 +17,15 @@ truffle develop
 $ migrate
 ```
 
-Start the front-end.
+Spin up the front-end.
 
 ```
 yarn start
 ```
 
-## Libraries 🙏
+## ❤️
 
+- [wagmi](https://wagmi.sh/)
 - [ethers](https://docs.ethers.io/v5/)
 - [ipfs-mini](https://github.com/silentcicero/ipfs-mini)
 - [react-sketch](https://github.com/tbolis/react-sketch)
