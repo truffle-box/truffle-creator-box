@@ -621,7 +621,7 @@ export default function Index() {
       <div className="Content">
         {!isValidL1 ? (
             <div>
-              unable to detect valid network. please connect to the kovan l1 testnet
+              👀 unable to detect network 👀
             </div>
         ) : (
             <></>
