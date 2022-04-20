@@ -1,5 +1,5 @@
-const TruffleCreator = artifacts.require("TruffleCreator");
+const Remixr = artifacts.require("Remixr");
 
 module.exports = function(deployer) {
-  deployer.deploy(TruffleCreator);
+  deployer.deploy(Remixr, "Remixr", "RMXR");
 };
