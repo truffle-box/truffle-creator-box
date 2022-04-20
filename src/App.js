@@ -11,6 +11,7 @@ import Gallery from "./Pages/Gallery";
 import {Provider, defaultChains} from "wagmi"
 import {InjectedConnector} from "wagmi/connectors/injected"
 
+
 // Chains for connectors to support
 const chains = defaultChains
 
@@ -25,6 +26,7 @@ const connectors = ({_chainId}) => {
 }
 
 function App() {
+
   return (
       <Provider autoConnect connectors={connectors}>
         <Routes>

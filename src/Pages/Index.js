@@ -1,6 +1,7 @@
 import React, {useEffect, useRef, useState} from "react";
 
-import {useAccount} from "wagmi";
+import {useAccount, useNetwork, useSigner} from "wagmi";
+import { InjectedConnector, } from 'wagmi/connectors/injected'
 
 import axios from "axios";
 import styled from "styled-components";
@@ -18,6 +19,8 @@ import sample2 from "../Assets/truffle-2.png";
 import sample3 from "../Assets/truffle-3.png";
 import sample4 from "../Assets/truffle-4.png";
 import sample5 from "../Assets/truffle-5.png";
+
+import remixr from '../contracts/Remixr.json';
 
 const fabric = require("fabric").fabric;
 
@@ -93,289 +96,12 @@ const ThumbImg = styled.img`
   cursor: pointer;
 `;
 
-// let l1Provider, l1Signer, arbitrumProvider;
-// let walletDetected = !!window.ethereum;
-
-// try {
-//   if (window.ethereum) {
-//     window.ethereum
-//       .enable()
-//       .then((l1Provider = new ethers.providers.Web3Provider(window.ethereum)));
-//     l1Signer = l1Provider.getSigner();
-//   } else {
-//     l1Provider = ethers.getDefaultProvider("kovan");
-//   }
-
-//   arbitrumProvider = new ethers.providers.JsonRpcProvider(
-//     `https://kovan4.arbitrum.io/rpc`
-//   );
-// } catch (err) {
-//   console.log(err);
-// }
-
 const abi = [
   "function totalSupply() view returns (uint)",
   "function tokenByIndex(uint) view returns (uint)",
   "function tokenURI(uint) view returns (string)",
   "function mint(address, string) returns (uint)",
 ];
-
-// function App() {
-//   const [imageCID, setImageCID] = useState("");
-//   const [metadataCID, setMetadataCID] = useState("");
-//   const [importAddress, setImportAddress] = useState(
-//     "0x3B3ee1931Dc30C1957379FAc9aba94D1C48a5405"
-//   );
-//   const [importId, setImportId] = useState(Math.floor(Math.random() * 24437)); // 24437, 12345, 11155, 1265, 175, 17367, 17618, 10798 :)))
-//   const [tool, setTool] = useState(Tools.Select);
-//   const [mintStatus, setMintStatus] = useState(false);
-
-//   const [mintModal, setMintModal] = useState(false);
-//   const [loadModal, setLoadModal] = useState(false);
-//   const [saveModal, setSaveModal] = useState(false);
-//   const [accountDialog, showAccountDialog] = useState(false);
-
-//   const [title, setTitle] = useState("");
-//   const [description, setDescription] = useState("");
-//   const [isValidL1, setIsValidL1] = useState();
-
-//   console.log(l1Signer || l1Provider);
-//   const contract = new ethers.Contract(
-//     "0xEb56A7AE1557117Acd1bBeA07D2053035f352b7b",
-//     abi,
-//     l1Signer || l1Provider
-//   );
-//   // const contractArbitrum = new ethers.Contract("0xe41eE07A9F41CD1Ab4e7F25A93321ba1Dc0Ec5b0", abi, arbitrumProvider);
-
-//   const infuraProvider = new ethers.providers.InfuraProvider();
-
-//   const checkNetworks = async () => {
-//     if (l1Provider) {
-//       const network = await l1Provider.getNetwork();
-//       if ([42, 1337, 344435, 801984078892471].includes(network.chainId)) {
-//         setIsValidL1(true);
-//       }
-//     } else {
-//       setIsValidL1(false);
-//     }
-//   };
-
-//   const _sketch = useRef();
-
-//   const shadify = () => {
-//     _sketch.current.addImg(shades);
-//   };
-
-//   const eyes = () => {
-//     _sketch.current.addImg(cartooneyes);
-//   };
-
-//   const laserify = () => {
-//     _sketch.current.addImg(lasereyes);
-//   };
-
-//   const trollify = () => {
-//     _sketch.current.addImg(troll);
-//   };
-
-//   const select = () => {
-//     setTool(Tools.Select);
-//   };
-
-//   const pen = () => {
-//     setTool(Tools.Pencil);
-//   };
-
-//   const text = async () => {
-//     _sketch.current.addText("TRUFFLES!", {
-//       fontFamily: "Impact",
-//       fill: "#fff",
-//       stroke: "#000",
-//       strokeWidth: "1",
-//     });
-//     setTool(Tools.Select);
-//   };
-
-//   const remove = async () => {
-//     _sketch.current.removeSelected();
-//   };
-
-//   const toggleLoadModal = () => {
-//     if (loadModal) {
-//       setLoadModal(false);
-//     } else {
-//       setLoadModal(true);
-//     }
-//   };
-
-//   const sanitize = (url) => {
-//     // hacks all the way down
-//     const x = url.replace("ipfs/", "").replace("ipfs://", "");
-//     const cidV0 = x.split("/")[0];
-//     const cidV1 = new ipfsClient.CID(cidV0).toV1();
-//     const sanitized = `https://${cidV1}.ipfs.dweb.link/${x.split("/")[1]}`;
-//     return sanitized;
-//   };
-
-//   const loadImage = async (url) => {
-//     if (url.indexOf("mp4") > -1) {
-//       alert("unable to load videos");
-//       setLoadModal(true);
-//       return;
-//     }
-
-//     const response = await axios.get(url, { responseType: "blob" });
-//     const reader = new FileReader();
-//     reader.readAsDataURL(response.data);
-//     reader.onload = async () => {
-//       fabric.Image.fromURL(reader.result, function (oImg) {
-//         oImg.scaleToWidth(640);
-//         _sketch.current.setBackgroundFromDataUrl(oImg.toDataURL(), {
-//           stretched: true,
-//           originX: "left",
-//           originY: "top",
-//         });
-//       });
-//     };
-//   };
-
-//   const loadExistingNFT = async () => {
-//     const contract = new ethers.Contract(importAddress, abi, infuraProvider);
-//     const metadataUri = await contract.tokenURI(importId);
-//     const metadataRes = await fetch(metadataUri);
-//     const metadata = await metadataRes.json();
-//     const santizedMetadataUri = sanitize(metadata.image);
-
-//     console.log(santizedMetadataUri);
-//     loadImage(santizedMetadataUri);
-//     setLoadModal(false);
-//   };
-
-//   const load = async (url) => {
-//     loadImage(url);
-//     setLoadModal(false);
-//   };
-
-//   const toggleSaveModal = () => {
-//     if (saveModal) {
-//       setSaveModal(false);
-//     } else {
-//       setSaveModal(true);
-//     }
-//   };
-
-//   const save = async () => {
-//     toggleSaveModal();
-//   };
-
-//   const actuallySave = async () => {
-//     const reader = new FileReader();
-//     reader.onloadend = async function () {
-//       const fileContents = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><image width="100%" height="100%" href="${reader.result}" /></svg>`;
-//       const ipfsImg = await ipfs.add(fileContents);
-//       setImageCID(ipfsImg);
-
-//       // TODO - load the title / description from fields (prepopulate from what's loaded)
-//       const metadata = `{ "name":"${title}", "description":"${description}","image":"ipfs://${ipfsImg}" }`;
-
-//       const ipfsMetadata = await ipfs.add(metadata);
-//       setMetadataCID(ipfsMetadata);
-//     };
-//     const canvas = _sketch.current.toDataURL();
-//     const blob = await (await fetch(canvas)).blob();
-//     reader.readAsDataURL(blob);
-//   };
-
-//   const mintNFT = async () => {
-//     setMintStatus("minting...");
-//     const address = await l1Signer.getAddress();
-//     const tx = await contract.mint(address, metadataCID);
-//     setMintStatus("transaction sent!");
-//     await tx.wait();
-//     setMintStatus("minted! head to the gallery to check it out");
-//   };
-
-//   const mint = () => {
-//     if (mintModal) {
-//       setMintModal(false);
-//     } else {
-//       setMintModal(true);
-//     }
-//   };
-
-//   const storageDeal = async () => {
-//     const metadataDeal = {
-//       jsonrpc: "2.0",
-//       id: 0,
-//       method: "Filecoin.ClientStartDeal",
-//       params: [
-//         {
-//           Data: {
-//             TransferType: "graphsync",
-//             Root: { "/": metadataCID },
-//             PieceCid: null,
-//             PieceSize: 0,
-//           },
-//           Wallet:
-//             "t3r3yrbujjmmjdixnnaab35ioi7ntpnlrt4bmsrtw4j5d6kjb2eeyu7axr2zv2g5m5emby6mzn6rvqjwzbfrya",
-//           Miner: "t01000",
-//           EpochPrice: 2500,
-//           MinBlocksDuration: 300,
-//         },
-//       ],
-//     };
-//     const res = await axios.post("http://localhost:7777/rpc/v0", metadataDeal);
-//     console.log(res);
-//   };
-
-//   // const switchToSKALE = async () => {
-//   //   let params = {
-//   //     chainId: "0x54173", //decodes to 344435
-//   //     chainName: "SKALE Network Testnet",
-//   //     rpcUrls: ["https://dev-testnet-v1-0.skalelabs.com"],
-//   //     nativeCurrency: {
-//   //       name: "SKALE ETH",
-//   //       symbol: "skETH",
-//   //       decimals: 18
-//   //     },
-//   //     blockExplorerUrls: [
-//   //       "https://expedition.dev/?rpcUrl=https://dev-testnet-v1-0.skalelabs.com"
-//   //     ]
-//   //   };
-
-//   //   const address = await l1Signer.getAddress();
-
-//   //   //request change to SKALE Network
-//   //   window.ethereum
-//   //     .request({
-//   //       method: "wallet_addEthereumChain",
-//   //       params: [params, address]
-//   //     })
-//   //     .catch((error) => console.log(error.message));
-//   // }
-
-//   const randomize = () => {
-//     setImportId(Math.floor(Math.random() * 24437));
-//   };
-
-//   // const mintToSKALE = async () => {
-//   //   debugger;
-//   //   setMintStatus('minting...')
-//   //   const address = await l1Signer.getAddress();
-//   //   const tx = await contract.mint(address, metadataCID);
-//   //   setMintStatus('transaction sent!');
-//   //   await tx.wait();
-//   //   setMintStatus('minted! head to the gallery to check it out');
-//   // }
-
-//   // const mintToArb = async () => {
-//   //   setMintModal(false);
-//   //   showAccountDialog(true);
-//   // }
-
-//   useEffect(() => {
-//     checkNetworks();
-//   }, []);
 
 /**
  * Returns a random integer between min (inclusive) and max (inclusive).
@@ -402,6 +128,7 @@ export default function Index() {
   const [{data: accountData}] = useAccount({
     fetchEns: true,
   });
+  const [{ data, error, loading }, getSigner] = useSigner()
 
   const [imageCID, setImageCID] = useState("");
   const [metadataCID, setMetadataCID] = useState("");
@@ -421,13 +148,6 @@ export default function Index() {
 
   const _sketch = useRef();
   const infuraProvider = new ethers.providers.InfuraProvider();
-
-  //   console.log(l1Signer || l1Provider);
-  //   const contract = new ethers.Contract(
-  //     "0xEb56A7AE1557117Acd1bBeA07D2053035f352b7b",
-  //     abi,
-  //     l1Signer || l1Provider
-  //   );
 
   const shadify = () => {
     _sketch.current.addImg(shades);
@@ -533,31 +253,6 @@ export default function Index() {
     }
   };
 
-  const storageDeal = async () => {
-    const metadataDeal = {
-      jsonrpc: "2.0",
-      id: 0,
-      method: "Filecoin.ClientStartDeal",
-      params: [
-        {
-          Data: {
-            TransferType: "graphsync",
-            Root: {"/": metadataCID},
-            PieceCid: null,
-            PieceSize: 0,
-          },
-          Wallet:
-              "t3r3yrbujjmmjdixnnaab35ioi7ntpnlrt4bmsrtw4j5d6kjb2eeyu7axr2zv2g5m5emby6mzn6rvqjwzbfrya",
-          Miner: "t01000",
-          EpochPrice: 2500,
-          MinBlocksDuration: 300,
-        },
-      ],
-    };
-    const res = await axios.post("http://localhost:7777/rpc/v0", metadataDeal);
-    console.log(res);
-  };
-
   const save = async () => {
     toggleSaveModal();
   };
@@ -578,6 +273,24 @@ export default function Index() {
     const canvas = _sketch.current.toDataURL();
     const blob = await (await fetch(canvas)).blob();
     reader.readAsDataURL(blob);
+  };
+
+  const mintNFT = async () => {
+
+    const contractAddress = remixr.networks[1650483476769].address;
+
+    const contract = new ethers.Contract(
+      contractAddress,
+      abi,  
+      data
+    );
+
+    setMintStatus("minting...");
+    const address = accountData.address;
+    const tx = await contract.mint(address, metadataCID);
+    setMintStatus("transaction sent!");
+    await tx.wait();
+    setMintStatus("minted! head to the gallery to check it out");
   };
 
   const sanitize = (url) => {
@@ -750,32 +463,12 @@ export default function Index() {
                 >{`ipfs://${metadataCID}`}</a>
               </p>
               <p>{metadataCID ? `done! you're now ready to mint!` : ``}</p>
-              <hr/>
-              <p>
-                once your assets have been saved, it's highly recommended to
-                preserve with a storage deal or pinning service
-              </p>
-              <MemeButton onClick={() => storageDeal()}>
-                preserve with filecoin
-              </MemeButton>
-              &nbsp;
-              <MemeButton>
-                <a
-                    href="http://pinata.cloud/"
-                    target="_blank"
-                    style={{color: "#000"}} rel="noreferrer"
-                >
-                  preserve with pinata
-                </a>
-              </MemeButton>
-              <p>
-                note that a filecoin requires a locally running lotus node
-              </p>
+
             </section>
             <footer className="modal-card-foot"/>
           </div>
         </div>
-        {/*
+        
          <div className={`modal ${mintModal ? "is-active" : ""}`}>
          <div className="modal-background"></div>
          <div className="modal-content">
@@ -791,14 +484,14 @@ export default function Index() {
          <p>
          <strong>layer 1</strong>
          </p>
-         <p>mint to layer 1 (more expensive / immediately usable)</p>
+         <p>mint to layer 1</p>
          <MemeButton onClick={() => mintNFT()}>mint to L1</MemeButton>
          <p>{mintStatus}</p>
          </section>
          <footer className="modal-card-foot"></footer>
          </div>
          </div>
-         */}
+        
       </div>
   );
 }
